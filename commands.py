@@ -46,8 +46,8 @@ class BotCommands(commands.Cog):
         await message.add_reaction("✅")
         def check(reaction, user):
             return user == ctx.message.author
-        reaction = await self.bot.wait_for('reaction_add', check=check)
-        await ctx.send(f"{ctx.User} reacted with: {reaction[0]}")
+        reaction, user = await self.bot.wait_for('reaction_add', check=check)
+        await ctx.send(f"{user} reacted with: {reaction}")
         
     
     # 🔵 $raid
