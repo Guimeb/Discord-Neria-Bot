@@ -7,8 +7,8 @@ class BotCommands(commands.Cog):
         self.bot = bot
     
     # 🔵 $help
-    @commands.command(name="help", help="Mostra a lista de comandos disponíveis.")
-    async def help_command(self, ctx):
+    @commands.command(name="commands", help="Mostra a lista de comandos disponíveis.")
+    async def commands_list(self, ctx):
         """Envia uma mensagem com todos os comandos disponíveis"""
         logger.info(f"Comando $help chamado por {ctx.author}")
 
