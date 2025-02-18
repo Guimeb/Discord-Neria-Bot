@@ -10,6 +10,7 @@ intents = discord.Intents.default()
 intents.message_content = True  # Permite ler mensagens
 
 bot = commands.Bot(command_prefix="$", intents=intents)
+bot.remove_command("help")
 
 # 🔵 Bot ready log
 @bot.event
