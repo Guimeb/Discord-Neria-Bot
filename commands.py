@@ -11,14 +11,12 @@ class BotCommands(commands.Cog):
 
     async def handle_raid_selection(self, interaction: discord.Interaction,
                                     raid_name: str):
-        """Callback quando o líder da raid escolhe uma dungeon"""
         await interaction.response.defer()
 
         user = interaction.user  # Pegamos o usuário que interagiu
         channel = interaction.channel  # Pegamos o canal onde foi enviado
 
-        await RaidManager.start_raid(user, channel, self.bot, raid_name
-                                     )  # Passamos corretamente os argumentos
+        await RaidManager.start_raid(user, channel, self.bot, raid_name)  # Passamos corretamente os argumentos
 
     # 🔵 $help
     @commands.command(name="help",
@@ -46,6 +44,11 @@ class BotCommands(commands.Cog):
         logger.info(f"Comando $hello chamado por {ctx.author}")
         message = await ctx.send(f"Olá, {ctx.author.mention}!")
         await message.add_reaction("✅")
+        def check(reaction, user):
+            return user == ctx.message.author
+        reaction = await self.bot.wait_for('reaction_add', check=check)
+        await ctx.send(f"{ctx.User} reacted with: {reaction[0]}")
+        
     
     # 🔵 $raid
     @commands.command(name="raid", help="Comece uma chamada de raid.")
