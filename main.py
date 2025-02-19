@@ -52,7 +52,7 @@ async def load_cogs():
     await bot.load_extension("cogs.help")
     await bot.load_extension("cogs.hello")
     await bot.load_extension("cogs.raid")
-    await bot.load_extension("cogs.solpov")
+    await bot.load_extension("cogs.solaripov")
     #await bot.load_extension("cogs.commands") 
 
 # 🟢 Bot Startup
