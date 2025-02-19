@@ -45,7 +45,7 @@ async def on_error(event, *args, **kwargs):
     print(error_msg)
 
 async def load_cogs():
-  await bot.load_extension("commands") 
+  await bot.load_extension("cogs.commands") 
 
 # 🟢 Bot Start
 async def main():
