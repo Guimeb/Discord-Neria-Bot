@@ -42,13 +42,7 @@ class BotCommands(commands.Cog):
     @commands.command(name="hello", help="Diz olá para você.")
     async def hello(self, ctx):
         logger.info(f"Comando $hello chamado por {ctx.author}")
-        message = await ctx.send(f"Olá, {ctx.author.mention}!")
-        await message.add_reaction("✅")
-        def check(reaction, user):
-            return user == ctx.message.author
-        reaction, user = await self.bot.wait_for('reaction_add', check=check)
-        await ctx.send(f"{user} reacted with: {reaction}")
-        
+        await ctx.send(f"Olá, {ctx.author.mention}!")
     
     # 🔵 $raid
     @commands.command(name="raid", help="Comece uma chamada de raid.")

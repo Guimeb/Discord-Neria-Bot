@@ -25,12 +25,47 @@ class RaidManager:
         raid_message = await channel.send(content="@raid", embed=embed)
         await raid_message.add_reaction("✅")
 
-        RaidManager.active_raids[raid_message.id] = {
+        RaidManager.active_raids = {
+            "msg_id": [raid_message.id],
             "leader": user,
             "raid_name": raid_name,
             "participants": [user],
             "message": raid_message
         }
+
+        async def check(reaction, user):
+            logger.info(f"Reação recebida: {reaction.emoji}")
+            if user.bot:
+                return
+
+            if reaction.message.id == RaidManager.active_raids["msg_id"]:
+                logger.info(f"{user} reagiu à raid {reaction.message.id}")
+                raid_info = RaidManager.active_raids[reaction.message.id]
+
+                # Verifica se o jogador já está na raid
+                if user in raid_info["participants"]:
+                    return  # Evita adicionar o mesmo jogador duas vezes
+
+                # Verifica se a raid está cheia
+                if len(raid_info["participants"]) >= 8:
+                    await user.send("⚠️ Essa raid já está cheia!")
+                    return
+
+                # Adiciona o jogador à lista de participantes
+                raid_info["participants"].append(user)
+
+                # Atualiza o embed
+                embed = raid_info["message"].embeds[0]
+                participantes_texto = "\n".join([
+                    f"{i+1}️⃣ {p.mention}"
+                    for i, p in enumerate(raid_info['participants'])
+                ])
+                embed.set_field_at(0,
+                                   name="🔹 Participantes:",
+                                   value=participantes_texto,
+                                   inline=False)
+
+                await raid_info["message"].edit(embed=embed)
 
         await asyncio.sleep(300)  # 5 minutos
 
@@ -57,35 +92,6 @@ class RaidManager:
             f"{ctx.author.mention}, escolha a raid que deseja iniciar:",
             view=view,
             delete_after=60)
-
-    @staticmethod
-    async def add_player_to_raid(reaction, user):
-        if user.bot:
-            return
-
-        if reaction.message.id in RaidManager.active_raids:
-            logger.info(f"{user} reagiu a raid {reaction.message.id}")
-            raid_info = RaidManager.active_raids[reaction.message.id]
-
-            if len(raid_info["participants"]) >= 8:
-                await user.send("⚠️ Essa raid já está cheia!")
-                return
-
-            if user not in raid_info["participants"]:
-                raid_info["participants"].append(user)
-
-                embed = raid_info["message"].embeds[0]
-                participantes_texto = "\n".join([
-                    f"{i+1}️⃣ {p.mention}"
-                    for i, p in enumerate(raid_info['participants'])
-                ])
-                embed.set_field_at(0,
-                                   name="🔹 Participantes:",
-                                   value=participantes_texto,
-                                   inline=False)
-
-                await raid_info["message"].edit(embed=embed)
-
 
 # 🔹 Criando a View e o Menu suspenso dentro do mesmo arquivo
 class RaidMenuView(View):
@@ -119,3 +125,27 @@ class RaidSelectMenu(Select):
     async def callback(self, interaction: discord.Interaction):
         """Quando o líder escolhe uma raid"""
         await self.callback_func(interaction, self.values[0])
+
+
+
+
+
+
+
+
+
+
+
+
+"""
+def check(reaction, user):
+    return (
+        reaction.message.id == message.id
+        and user != ctx.bot.user
+    )
+
+while True:
+    reaction, user = await self.bot.wait_for("reaction_add", check=check)
+    logger.info(f"Reação adicionada por {user}")
+    await ctx.send(f"{user.mention} reagiu com: {reaction.emoji}")
+"""

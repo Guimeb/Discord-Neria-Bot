@@ -1,10 +1,21 @@
-import discord
-from discord.ext import commands
+import json
 import os
+import sys
 import traceback
 import asyncio
-from log import logger
 
+import discord
+from discord.ext import commands
+
+from logs.log import logger
+
+# 🟢 Json Config
+if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"):
+    sys.exit("'config.json' not found! Please add it and try again.")
+else:
+    with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.json") as file:
+        config = json.load(file)
+        
 # 🟢 Bot Config
 intents = discord.Intents.default()
 intents.message_content = True  # Permite ler mensagens
@@ -34,7 +45,7 @@ async def on_error(event, *args, **kwargs):
     print(error_msg)
 
 async def load_cogs():
-  await bot.load_extension("commands")  # Carrega a extensão de comandos
+  await bot.load_extension("commands") 
 
 # 🟢 Bot Start
 async def main():
