@@ -1,7 +1,7 @@
 import discord
 import asyncio
 from discord.ui import View, Select
-from log import logger
+from logs.log import logger
 
 
 class RaidManager:

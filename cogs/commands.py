@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from log import logger
+from logs.log import logger
 from raidManager import RaidMenuView, RaidManager
 
 
