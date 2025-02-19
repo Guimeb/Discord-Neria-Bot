@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from logs.log import logger
-from .raidManager import RaidMenuView, RaidManager
+from raidManager import RaidMenuView, RaidManager
 
 
 class BotCommands(commands.Cog):
