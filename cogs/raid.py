@@ -216,7 +216,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         "**Participants:**\n" + participant_list
         embed.color = discord.Color.red()
         embed.remove_footer()
-        embed.set_footer("Raid closed. Leader opened the lobby.")
+        embed.set_footer(text="Raid closed. Leader opened the lobby.")
         await raid_info["message"].edit(embed=embed, view=None)  # Remove the reaction options
 
         # Log the closure
