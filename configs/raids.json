@@ -1,0 +1,29 @@
+{
+  "raids": [
+    {
+      "name": "Thaemine",
+      "emoji": "⚔️",
+      "max_players": 8
+    },
+    {
+      "name": "Behemot",
+      "emoji": "🐲",
+      "max_players": 16
+    },
+    {
+      "name": "Echidna",
+      "emoji": "🐍",
+      "max_players": 8
+    },
+    {
+      "name": "Aegir",
+      "emoji": "🧑‍🦯",
+      "max_players": 8
+    },
+    {
+      "name": "Brelshaza",
+      "emoji": "☄️",
+      "max_players": 8
+    }
+  ]
+}

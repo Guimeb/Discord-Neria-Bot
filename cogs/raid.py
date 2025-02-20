@@ -96,7 +96,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
 
         # Send public message
         raid_message = await channel.send(embed=embed)
-        self.bot.loop.create_task(self.close_raid_after_timeout(raid_message.id, 60))
+        self.bot.loop.create_task(self.close_raid_after_timeout(raid_message.id, 100))
 
         await raid_message.add_reaction("✅")  # Add reaction for players to join
 
@@ -138,28 +138,46 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         self.log_active_raids()
 
     @commands.Cog.listener()
-    async def on_raw_reaction_remove(self, payload): # Remove user to raid on  remove reaction
-        """Handles users leaving a raid by removing their reaction."""
+    async def on_raw_reaction_remove(self, payload):
+        logger.info(f"📥 on_raw_reaction_remove triggered: \n {payload}")
+
+        # Ignore bot's own reactions
         if payload.user_id == self.bot.user.id:
             return
 
+        # Get the raid info for this message
         raid_info = self.active_raids.get(payload.message_id)
         if not raid_info:
             return
 
-        user = self.bot.get_user(payload.user_id)
-        if not user:
+        # Get the guild and user objects
+        guild = self.bot.get_guild(payload.guild_id)
+        if not guild:
+            logger.info("⚠️ Guild not found.")
             return
 
-        if user == raid_info["leader"]:
-            return  # Leader cannot leave the raid
+        user = guild.get_member(payload.user_id)
+        if not user:
+            logger.info("⚠️ User not found.")
+            return
 
+        # ✅ Prevent the leader from removing themselves
+        if user == raid_info["leader"]:
+            logger.info("⚠️ Leader's reaction ignored.")
+            return  # Ignore the leader's reaction
+
+        # Only remove if the reaction is the correct one
+        if payload.emoji.name != "✅":
+            return
+
+        # Check if the user is in the players list
         if user in raid_info["players"]:
             raid_info["players"].remove(user)
-
             self.update_raid_embed(raid_info)
             logger.info(f"❌ {user} left the raid {raid_info['raid']} (Message ID: {payload.message_id})")
             self.log_active_raids()
+        else:
+            logger.info("⚠️ User was not in the raid participants list.")
 
     def update_raid_embed(self, raid_info): # Update raid embed
         participant_list = "\n".join([f"✅ {p.mention}" for p in raid_info["players"]])
@@ -171,13 +189,15 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         self.bot.loop.create_task(raid_info["message"].edit(embed=embed))
 
     def log_active_raids(self): # Debug Log
+        
         logger.info("📌 Current Active Raids:")
         if not self.active_raids:
             logger.info("  - No active raids")
             return
-
+            
         for msg_id, data in self.active_raids.items():
-            logger.info(f"  - Raid: {data['raid']} | Leader: {data['leader']} | Players: {len(data['players'])}")
+            player_names = ", ".join([player.name for player in data['players']])
+            logger.info(f"  - Raid: {data['raid']} | Leader: {data['leader'].name} | Players ({len(data['players'])}): {player_names}")
 
     async def close_raid_after_timeout(self, message_id, timeout):
         await discord.utils.sleep_until(discord.utils.utcnow() + timedelta(seconds=timeout))
@@ -190,12 +210,13 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         participant_list = "\n".join([f"✅ {p.mention}" for p in raid_info["players"]])
         # Finalize the raid
         embed = raid_info["message"].embeds[0]
-        embed.remove_field(0)
         embed.title = f"🔒 Raid {raid_info['raid']} Closed!"
         embed.description = "\n\n🛑 Raid registration is now closed." \
         f"\n**Missing Players: {raid_info['max_players'] - len(raid_info['players'])}**\n\n" \
         "**Participants:**\n" + participant_list
         embed.color = discord.Color.red()
+        embed.remove_footer()
+        embed.set_footer("Raid closed. Leader opened the lobby.")
         await raid_info["message"].edit(embed=embed, view=None)  # Remove the reaction options
 
         # Log the closure
