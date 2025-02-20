@@ -91,7 +91,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
                         f"**Max Players: {max_players}**",
             color=discord.Color.green()
         )
-        
+
         embed.set_footer(text="Players can now join by reacting.")
 
         # Send public message
@@ -137,14 +137,18 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         logger.info(f"✅ {user} joined the raid {raid_info['raid']} (Message ID: {reaction.message.id})")
         self.log_active_raids()
 
-    @commands.Cog.listener() #Nao funciona ------------------------------
-    async def on_raw_reaction_remove(self, reaction, user): # Remove user to raid on  remove reaction
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload): # Remove user to raid on  remove reaction
         """Handles users leaving a raid by removing their reaction."""
-        if user.bot:
+        if payload.user_id == self.bot.user.id:
             return
 
-        raid_info = self.active_raids.get(reaction.message.id)
+        raid_info = self.active_raids.get(payload.message_id)
         if not raid_info:
+            return
+
+        user = self.bot.get_user(payload.user_id)
+        if not user:
             return
 
         if user == raid_info["leader"]:
@@ -154,7 +158,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
             raid_info["players"].remove(user)
 
             self.update_raid_embed(raid_info)
-            logger.info(f"❌ {user} left the raid {raid_info['raid']} (Message ID: {reaction.message.id})")
+            logger.info(f"❌ {user} left the raid {raid_info['raid']} (Message ID: {payload.message_id})")
             self.log_active_raids()
 
     def update_raid_embed(self, raid_info): # Update raid embed
