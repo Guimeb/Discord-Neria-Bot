@@ -2,15 +2,16 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Select
 from logs.log import logger
+from datetime import timedelta
 
 class RaidSelectMenu(Select): # Raid Dropdown
     def __init__(self, callback_func):
         options = [
-            discord.SelectOption(label="Thaemine", description="Thaemine Raid (8 Players)", emoji="⚔️"),
-            discord.SelectOption(label="Behemot", description="Behemot Raid (16 Players)", emoji="🐲"),
-            discord.SelectOption(label="Echidna", description="Echidna Raid (8 Players)", emoji="🐍"),
-            discord.SelectOption(label="Aegir", description="Aegir Raid (8 Players)", emoji="🧑‍🦯"),
-            discord.SelectOption(label="Brel", description="Brel Raid (8 Players)", emoji="☄️"),
+            discord.SelectOption(label="Thaemine", description="Thaemine Raid", emoji="⚔️"),
+            discord.SelectOption(label="Behemot", description="Behemot Raid", emoji="🐲"),
+            discord.SelectOption(label="Echidna", description="Echidna Raid", emoji="🐍"),
+            discord.SelectOption(label="Aegir", description="Aegir Raid", emoji="🧑‍🦯"),
+            discord.SelectOption(label="Brel", description="Brel Raid", emoji="☄️"),
         ]
         super().__init__(placeholder="Choose a raid...", options=options)
         self.callback_func = callback_func
@@ -45,11 +46,11 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
             description="Select the raid you want to start from the menu below:",
             color=discord.Color.purple()
         )
-        embed.add_field(name="⚔️ Thaemine", value="8 Players", inline=False)
-        embed.add_field(name="🐲 Behemot", value="16 Players", inline=False)
-        embed.add_field(name="🐍 Echidna", value="8 Players", inline=False)
-        embed.add_field(name="🧑‍🦯 Aegir", value="8 Players", inline=False)
-        embed.add_field(name="☄️ Brel", value="8 Players", inline=False)
+        embed.add_field(name="⚔️ Thaemine", value="", inline=False)
+        embed.add_field(name="🐲 Behemot", value="", inline=False)
+        embed.add_field(name="🐍 Echidna", value="", inline=False)
+        embed.add_field(name="🧑‍🦯 Aegir", value="", inline=False)
+        embed.add_field(name="☄️ Brel", value="", inline=False)
         embed.set_footer(text="Use the menu below to choose.")
 
         view = RaidMenuView(self.raid_selected) 
@@ -90,10 +91,13 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
                         f"**Max Players: {max_players}**",
             color=discord.Color.green()
         )
+        
         embed.set_footer(text="Players can now join by reacting.")
 
         # Send public message
         raid_message = await channel.send(embed=embed)
+        self.bot.loop.create_task(self.close_raid_after_timeout(raid_message.id, 60))
+
         await raid_message.add_reaction("✅")  # Add reaction for players to join
 
         # Store raid info in active_raids
@@ -110,7 +114,6 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user): # Add user to raid on reaction
-        """Handles users joining a raid by reacting."""
         if user.bot or reaction.emoji != "✅":
             return
 
@@ -134,8 +137,8 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         logger.info(f"✅ {user} joined the raid {raid_info['raid']} (Message ID: {reaction.message.id})")
         self.log_active_raids()
 
-    @commands.Cog.listener()
-    async def on_reaction_remove(self, reaction, user): # Remove user to raid on  remove reaction
+    @commands.Cog.listener() #Nao funciona ------------------------------
+    async def on_raw_reaction_remove(self, reaction, user): # Remove user to raid on  remove reaction
         """Handles users leaving a raid by removing their reaction."""
         if user.bot:
             return
@@ -164,7 +167,6 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         self.bot.loop.create_task(raid_info["message"].edit(embed=embed))
 
     def log_active_raids(self): # Debug Log
-        """Logs the current state of active raids."""
         logger.info("📌 Current Active Raids:")
         if not self.active_raids:
             logger.info("  - No active raids")
@@ -173,19 +175,31 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         for msg_id, data in self.active_raids.items():
             logger.info(f"  - Raid: {data['raid']} | Leader: {data['leader']} | Players: {len(data['players'])}")
 
+    async def close_raid_after_timeout(self, message_id, timeout):
+        await discord.utils.sleep_until(discord.utils.utcnow() + timedelta(seconds=timeout))
+
+        raid_info = self.active_raids.get(message_id)
+        if not raid_info:
+            return  # Raid already closed or doesn't exist
+
+        await raid_info["message"].clear_reactions()
+        participant_list = "\n".join([f"✅ {p.mention}" for p in raid_info["players"]])
+        # Finalize the raid
+        embed = raid_info["message"].embeds[0]
+        embed.remove_field(0)
+        embed.title = f"🔒 Raid {raid_info['raid']} Closed!"
+        embed.description = "\n\n🛑 Raid registration is now closed." \
+        f"\n**Missing Players: {raid_info['max_players'] - len(raid_info['players'])}**\n\n" \
+        "**Participants:**\n" + participant_list
+        embed.color = discord.Color.red()
+        await raid_info["message"].edit(embed=embed, view=None)  # Remove the reaction options
+
+        # Log the closure
+        logger.info(f"⏰ Raid {raid_info['raid']} closed automatically (Message ID: {message_id})")
+        self.log_active_raids()
+
+        # Remove from active_raids
+        self.active_raids.pop(message_id, None)
+
 async def setup(bot):
     await bot.add_cog(RaidCommand(bot))
-    
-"""
-
-def check(reaction, user):
-    return (
-        reaction.message.id == message.id
-        and user != ctx.bot.user
-    )
-
-while True:
-    reaction, user = await self.bot.wait_for("reaction_add", check=check)
-    logger.info(f"Reação adicionada por {user}")
-    await ctx.send(f"{user.mention} reagiu com: {reaction.emoji}")
-"""

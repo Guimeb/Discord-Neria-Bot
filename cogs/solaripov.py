@@ -18,8 +18,8 @@ class SolariPovCommand(commands.Cog, name="solpov"):
               description="Solari Pov",
               color=discord.Color.blue()
         )
-        embed.set_image(url="https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2txbnl3MXp4ZGFzaHMzbjJ3ZWRsYWgxZWkyNmN6MTJzbzNycnF1bCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l7ZFSdEdcDuiUxTgSy/giphy.gif")
-
+        embed.set_image(
+            url="https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ2txbnl3MXp4ZGFzaHMzbjJ3ZWRsYWgxZWkyNmN6MTJzbzNycnF1bCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l7ZFSdEdcDuiUxTgSy/giphy.gif")
         embed.set_footer(
               text="- Solari."
           )
