@@ -1,11 +1,38 @@
+import json
+import os
 import discord
 from discord.ext import commands
 from discord.ui import View, Select
 from logs.log import logger
 from datetime import timedelta
 
+def load_server_config():
+    """Load server configuration from server_config.json"""
+    config_path = os.path.join(os.path.dirname(__file__), '../configs/server_config.json')
+
+    # Check if the file exists
+    if not os.path.exists(config_path):
+        logger.warning(f"⚠️ server_config.json not found. Creating a new one at {config_path}")
+        try:
+            with open(config_path, 'w') as f:
+                json.dump({"guilds": {}}, f)
+            logger.info("✅ Created new server_config.json with default values.")
+        except Exception as e:
+            logger.error(f"❌ Failed to create server_config.json: {e}")
+            return {}
+
+    # Try to load the JSON file
+    try:
+        with open(config_path, 'r', encoding='utf-8') as file:
+            config_data = json.load(file)
+            logger.info("✅ server_config.json loaded successfully.")
+            return config_data
+    except Exception as e:
+        logger.error(f"❌ Failed to load server_config.json: {e}")
+        return {}
+
 class RaidSelectMenu(Select): # Raid Dropdown
-    def __init__(self, callback_func):
+    def __init__(self, callback_func, guild_id):
         options = [
             discord.SelectOption(label="Thaemine", description="Thaemine Raid", emoji="⚔️"),
             discord.SelectOption(label="Behemot", description="Behemot Raid", emoji="🐲"),
@@ -15,16 +42,17 @@ class RaidSelectMenu(Select): # Raid Dropdown
         ]
         super().__init__(placeholder="Choose a raid...", options=options)
         self.callback_func = callback_func
+        self.guild_id = guild_id
 
     #Callback when user selects an option
     async def callback(self, interaction: discord.Interaction):
-        await self.callback_func(interaction, self.values[0], interaction.message)
+        await self.callback_func(interaction, self.values[0], interaction.message, self.guild_id)
 
 
 class RaidMenuView(View): # Raid Dropdown View
-    def __init__(self, raid_callback):
+    def __init__(self, raid_callback, guild_id):
         super().__init__()
-        self.add_item(RaidSelectMenu(raid_callback))
+        self.add_item(RaidSelectMenu(raid_callback, guild_id))
 
 
 class RaidCommand(commands.Cog, name="raid"): # Comando Raid
@@ -53,7 +81,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         embed.add_field(name="☄️ Brel", value="", inline=False)
         embed.set_footer(text="Use the menu below to choose.")
 
-        view = RaidMenuView(self.raid_selected) 
+        view = RaidMenuView(self.raid_selected, ctx.guild.id) 
 
         # Send a DM (private message) to the user
         try:
@@ -66,8 +94,38 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
         self.active_raids[ctx.author.id] = {"channel": ctx.channel, "dm_message": user_dm}
 
     # Raid show embed
-    async def raid_selected(self, interaction: discord.Interaction, raid_name: str, message: discord.Message): 
+    async def raid_selected(self, interaction: discord.Interaction, raid_name: str, message: discord.Message, guild_id: int): 
         await interaction.response.defer()
+
+        # Get the guild object using the passed guild ID
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
+            logger.error("❌ Failed to get Guild from Passed Guild ID.")
+            return
+
+        # Load the server config
+        config_data = load_server_config()
+        logger.info(f"🔍 Config Data Loaded: {config_data}")
+
+        raid_role_mention = ""
+
+        # Get the role to mention from the config
+        if str(guild_id) in config_data["guilds"]:
+            role_id = config_data["guilds"][str(guild_id)].get("raid_role")
+            logger.info(f"🔍 Raid Role ID found: {role_id}")
+
+            if role_id:
+                # Get the role from the guild object
+                role = guild.get_role(int(role_id))
+                if role:
+                    raid_role_mention = f"<@&{role_id}> "  # Format for mentioning the role
+                    logger.info(f"📢 Role to mention: {raid_role_mention}")
+                else:
+                    logger.warning(f"⚠️ Role ID {role_id} not found in guild or bot lacks permission to view it.")
+            else:
+                logger.warning(f"⚠️ No role ID set for Guild ID: {guild_id}")
+        else:
+            logger.warning(f"⚠️ Guild ID {guild_id} not found in server_config.json")
 
         # Delete the previous private message
         try:
@@ -86,7 +144,8 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
 
         embed = discord.Embed(
             title=f"🚀 Raid {raid_name} Started!",
-            description=f"{interaction.user.mention} has started a **{raid_name}** raid!\n\n"
+            description=f"{interaction.user.mention} has started a **{raid_name}** raid!\n"
+                        "**You have 5 minutes to save your spot**\n\n"
                         "React with ✅ to join the raid!\n\n"
                         f"**Max Players: {max_players}**",
             color=discord.Color.green()
@@ -94,9 +153,9 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
 
         embed.set_footer(text="Players can now join by reacting.")
 
-        # Send public message
-        raid_message = await channel.send(embed=embed)
-        self.bot.loop.create_task(self.close_raid_after_timeout(raid_message.id, 100))
+        # Send public message with role mention
+        raid_message = await channel.send(content=raid_role_mention, embed=embed)
+        self.bot.loop.create_task(self.close_raid_after_timeout(raid_message.id, 300000))
 
         await raid_message.add_reaction("✅")  # Add reaction for players to join
 
@@ -111,6 +170,7 @@ class RaidCommand(commands.Cog, name="raid"): # Comando Raid
 
         logger.info(f"📝 Raid started: {raid_name} by {interaction.user} (Message ID: {raid_message.id})")
         self.log_active_raids()
+
 
     @commands.Cog.listener()
     async def on_reaction_add(self, reaction, user): # Add user to raid on reaction

@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import asyncio
+from dotenv import load_dotenv
 
 import discord
 from discord.ext import commands, tasks
@@ -10,12 +11,14 @@ from discord.ext.commands import Context
 
 from logs.log import logger
 
+load_dotenv()
+
 # 🟢 JSON Configuration
 if not os.path.isfile(
         f"{os.path.realpath(os.path.dirname(__file__))}/configs/config.json"):
     sys.exit("'config.json' not found! Please add it and try again.")
 else:
-    with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"
+    with open(f"{os.path.realpath(os.path.dirname(__file__))}/configs/config.json"
               ) as file:
         config = json.load(file)
 
@@ -53,6 +56,7 @@ async def load_cogs():
     await bot.load_extension("cogs.hello")
     await bot.load_extension("cogs.raid")
     await bot.load_extension("cogs.solaripov")
+    await bot.load_extension("cogs.gdrpov")
     #await bot.load_extension("cogs.commands") 
 
 # 🟢 Bot Startup
